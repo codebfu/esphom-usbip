@@ -1,0 +1,77 @@
+esphome:
+  name: esp32-usbip
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+external_components:
+  - source: github://codebfu/esphom-usbip
+    components: [usbip]
+
+text_sensor:
+  - platform: template
+    name: "USB Device 0 VID:PID"
+    id: usb_dev0_vidpid
+  - platform: template
+    name: "USB Device 0 BusID"
+    id: usb_dev0_busid
+  - platform: template
+    name: "USB Device 1 VID:PID"
+    id: usb_dev1_vidpid
+  - platform: template
+    name: "USB Device 1 BusID"
+    id: usb_dev1_busid
+
+sensor:
+  - platform: template
+    name: "USB Device Count"
+    id: usb_device_count
+    unit_of_measurement: "devices"
+
+binary_sensor:
+  - platform: template
+    name: "USB Device 0 Connected"
+    id: usb_dev0_connected
+  - platform: template
+    name: "USB Device 0 In Use"
+    id: usb_dev0_inuse
+  - platform: template
+    name: "USB Device 1 Connected"
+    id: usb_dev1_connected
+  - platform: template
+    name: "USB Device 1 In Use"
+    id: usb_dev1_inuse
+
+button:
+  - platform: template
+    name: "Refresh USB devices"
+    icon: "mdi:usb"
+    on_press:
+      - lambda: id(usbip_main).refresh_devices();
+
+usbip:
+  id: usbip_main
+  port: 3240
+  keepalive_idle: 5
+  keepalive_interval: 5
+  keepalive_count: 3
+  enable_hubs: false  # set true for multi-device hub support
+  device_count_id: usb_device_count
+  sensors:
+    - connected_id: usb_dev0_connected
+      inuse_id: usb_dev0_inuse
+      pid_id: usb_dev0_vidpid
+      busid_id: usb_dev0_busid
+    - connected_id: usb_dev1_connected
+      inuse_id: usb_dev1_inuse
+      pid_id: usb_dev1_vidpid
+      busid_id: usb_dev1_busid
+  # Optional: ignore devices by VID:PID or busid
+  # Use "0x1234:*" to ignore all PIDs for that VID
+  # ignore_vid_pid:
+  #   - "0x0781:*"
+  # ignore_busid:
+  #   - "1-1"

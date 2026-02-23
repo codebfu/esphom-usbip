@@ -1,0 +1,19 @@
+# ESPHome
+.esphome/
+__pycache__/
+*.pyc
+
+# PlatformIO
+.pio/
+
+# Temp / test
+temp/
+
+# Secrets
+secrets.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

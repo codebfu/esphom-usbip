@@ -1,0 +1,6 @@
+# USBIP component - requires ESP-IDF and ESP32-S3/S2 (USB Host)
+dependencies:
+  - esp32
+  - binary_sensor
+  - text_sensor
+  - sensor
