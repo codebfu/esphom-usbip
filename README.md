@@ -144,6 +144,44 @@ usbip list -r <device-ip>
 sudo usbip attach -r <device-ip> -b 1-1
 ```
 
+## Testing with prod.yaml
+
+For local development and testing, use `prod.yaml`:
+
+1. Copy `secrets.yaml.example` to `secrets.yaml` and fill in your Wi-Fi credentials.
+2. Build and flash: `esphome run prod.yaml`
+3. The config uses the local component path and DEBUG logging for usbip, usbip_tcp, usb_device, usb_host.
+4. When a client attaches/detaches (e.g. `usbip attach -r <ip> -b 1-1`), logs will show:
+   - `OP_REQ_IMPORT: client attach busid='1-1'`
+   - `Client attached device: busid='1-1'` → `inuse=true`
+   - `Socket close: client release busid='1-1'` → `inuse=false`
+5. The "USB Device 0 In Use" binary sensor should reflect the attach/release state.
+
+## Debug Logging
+
+To enable debug logs for troubleshooting, use the ESPHome [logger component](https://esphome.io/components/logger.html).
+
+**Global debug level** (all components):
+
+```yaml
+logger:
+  level: DEBUG
+```
+
+**USBIP-specific debug** (recommended to reduce log noise):
+
+```yaml
+logger:
+  level: INFO
+  logs:
+    usbip: DEBUG
+    usbip_tcp: DEBUG
+    usb_device: DEBUG
+    usb_host: DEBUG
+```
+
+For maximum verbosity during protocol debugging, use `VERBOSE` instead of `DEBUG`. Note that `VERY_VERBOSE` can impact performance and stability.
+
 ## Migration to Standalone usb_host
 
 To use both `usb_uart` (CDC-ACM, CH340, etc.) and USBIP on the same device, see [docs/migration_to_standalone_usb_host.md](docs/migration_to_standalone_usb_host.md).

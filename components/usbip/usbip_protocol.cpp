@@ -216,6 +216,9 @@ static void _event_handler2(void *event_handler_arg, esp_event_base_t event_base
     usbip_import_evt_t *import_evt = (usbip_import_evt_t *)event_data;
     sock = import_evt->socket;
     strncpy(busid, import_evt->busid, sizeof(busid) - 1);
+    busid[sizeof(busid) - 1] = '\0';
+    for (size_t i = strlen(busid); i > 0 && (busid[i - 1] == ' ' || busid[i - 1] == '\t'); i--)
+      busid[i - 1] = '\0';
   } else if (event_data) {
     usbip_socket_evt_t *evt = (usbip_socket_evt_t *)event_data;
     sock = evt->socket;
@@ -243,6 +246,7 @@ static void _event_handler2(void *event_handler_arg, esp_event_base_t event_base
       int to_write = sizeof(usbip_import_t);
       send(sock, (void *)&import_data, to_write, MSG_DONTWAIT);
       if (busid[0] && s_app) {
+        ESP_LOGI(TAG, "OP_REQ_IMPORT: client attach busid='%s' sock=%d", busid, sock);
         std::lock_guard<std::mutex> lock(s_socket_mutex);
         s_socket_to_busid[sock] = busid;
         s_busid_attached_count[busid]++;
@@ -274,8 +278,10 @@ USBipDevice::~USBipDevice() {
   memset(&devlist_data, 0, sizeof(usbip_devlist_t));
 }
 
-bool USBipDevice::init(USBhost *host) {
+bool USBipDevice::init(USBhost *host, const char *busid) {
   _host = host;
+  strncpy(m_busid, busid, sizeof(m_busid) - 1);
+  m_busid[sizeof(m_busid) - 1] = '\0';
 
   USBhostDevice::init(1032);
   xfer_ctrl->callback = usb_ctrl_cb;
@@ -320,7 +326,8 @@ void USBipDevice::fill_import_data() {
   import_data.request.command = OP_REP_IMPORT;
   import_data.request.status = 0;
   strcpy(import_data.path, "/espressif/usbip/usb1");
-  strcpy(import_data.busid, "1-1");
+  strncpy(import_data.busid, m_busid, sizeof(import_data.busid) - 1);
+  import_data.busid[sizeof(import_data.busid) - 1] = '\0';
   import_data.busnum = __bswap_32(1);
   import_data.devnum = __bswap_32(1);
 
@@ -359,7 +366,8 @@ void USBipDevice::fill_list_data() {
   devlist_data.devnum = __bswap_32(1);
   devlist_data.count = __bswap_32(1);
   strcpy(devlist_data.path, "/espressif/usbip/usb1");
-  strcpy(devlist_data.busid, "1-1");
+  strncpy(devlist_data.busid, m_busid, sizeof(devlist_data.busid) - 1);
+  devlist_data.busid[sizeof(devlist_data.busid) - 1] = '\0';
 
   devlist_data.speed = info.speed ? USB_FULL_SPEED : USB_LOW_SPEED;
   devlist_data.idVendor = __bswap_16(dev_desc->idVendor);
@@ -564,10 +572,10 @@ void USBipApplication::clientEventCallback(const usb_host_client_event_msg_t *ev
     usb_device_info_t info = app->m_host->getDeviceInfo();
     const usb_device_desc_t *dev_desc = app->m_host->getDeviceDescriptor();
 
+    snprintf(app->m_busid, sizeof(app->m_busid), "1-%d", event_msg->new_dev.address);
     app->m_device = new (std::nothrow) USBipDevice();
-    if (app->m_device && app->m_device->init(app->m_host)) {
+    if (app->m_device && app->m_device->init(app->m_host, app->m_busid)) {
       app->m_ready = true;
-      snprintf(app->m_busid, sizeof(app->m_busid), "1-%d", event_msg->new_dev.address);
       if (app->m_on_connected) {
         std::string name = app->m_host->getDeviceName();
         app->m_on_connected(app->m_busid, dev_desc->idVendor, dev_desc->idProduct, name.c_str());
@@ -617,6 +625,7 @@ void USBipApplication::on_socket_close(int sock) {
         cit->second--;
         if (cit->second <= 0) {
           s_busid_attached_count.erase(cit);
+          ESP_LOGI(TAG, "Socket close: client release busid='%s' sock=%d", busid.c_str(), sock);
           if (m_on_released) {
             m_on_released(busid.c_str());
           }

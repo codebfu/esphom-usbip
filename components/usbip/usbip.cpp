@@ -222,6 +222,7 @@ void USBipComponent::on_device_connected(const char *busid, uint16_t vid, uint16
 }
 
 void USBipComponent::on_device_disconnected(const char *busid) {
+  ESP_LOGI(TAG, "USB device disconnected: busid='%s'", busid);
   auto it = busid_to_index_.find(busid);
   if (it != busid_to_index_.end()) {
     size_t idx = it->second;
@@ -234,22 +235,32 @@ void USBipComponent::on_device_disconnected(const char *busid) {
       }
     }
     set_timeout("usbip_sensors", 0, [this]() { update_all_sensors(); });
+  } else {
+    ESP_LOGW(TAG, "  -> busid not found in devices");
   }
 }
 
 void USBipComponent::on_device_attached(const char *busid) {
+  ESP_LOGI(TAG, "Client attached device: busid='%s'", busid);
   auto it = busid_to_index_.find(busid);
   if (it != busid_to_index_.end() && it->second < devices_.size()) {
     devices_[it->second].inuse = true;
+    ESP_LOGD(TAG, "  -> inuse=true for index %zu", it->second);
     set_timeout("usbip_sensors", 0, [this]() { update_all_sensors(); });
+  } else {
+    ESP_LOGW(TAG, "  -> busid not found in devices (size=%zu)", devices_.size());
   }
 }
 
 void USBipComponent::on_device_released(const char *busid) {
+  ESP_LOGI(TAG, "Client released device: busid='%s'", busid);
   auto it = busid_to_index_.find(busid);
   if (it != busid_to_index_.end() && it->second < devices_.size()) {
     devices_[it->second].inuse = false;
+    ESP_LOGD(TAG, "  -> inuse=false for index %zu", it->second);
     set_timeout("usbip_sensors", 0, [this]() { update_all_sensors(); });
+  } else {
+    ESP_LOGW(TAG, "  -> busid not found in devices (size=%zu)", devices_.size());
   }
 }
 

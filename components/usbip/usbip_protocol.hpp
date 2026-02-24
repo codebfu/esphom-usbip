@@ -143,7 +143,7 @@ class USBipDevice : public USBhostDevice {
  public:
   USBipDevice();
   ~USBipDevice();
-  bool init(USBhost *);
+  bool init(USBhost *host, const char *busid);
 
   int req_ctrl_xfer(usbip_submit_t *req, int socket);
   int req_ep_xfer(usbip_submit_t *req, int socket);
@@ -151,6 +151,7 @@ class USBipDevice : public USBhostDevice {
  private:
   void fill_import_data();
   void fill_list_data();
+  char m_busid[32] = {};
 };
 
 class USBIP {
